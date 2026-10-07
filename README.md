@@ -68,6 +68,8 @@ IMAGENES
 <img width="1920" height="1080" alt="swappy-20261006_222627" src="https://github.com/user-attachments/assets/87444f2d-24e4-4782-9be4-60b6bc2f8c61" />
 <img width="1920" height="1080" alt="swappy-20261006_222646" src="https://github.com/user-attachments/assets/9035749a-27b5-4801-93ab-318d8ba9b04c" />
 <img width="1138" height="212" alt="swappy-20261006_222717" src="https://github.com/user-attachments/assets/f2044b39-2071-4240-9543-69cfcbb362ca" />
+<img width="924" height="411" alt="swappy-20261006_223117" src="https://github.com/user-attachments/assets/3274ad8a-9a90-4f87-9f7e-6d569abbe97f" />
+
 
 
 
