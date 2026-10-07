@@ -1,0 +1,1444 @@
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
+
+/**
+ * ControlCenter.qml
+ * Panel Lateral de Control y Notificaciones (Estilo Frosted Glass Cyberpunk)
+ * - Tamaño optimizado y compacto (300px).
+ * - Notificaciones con botón Clear All, descarte individual y Dino Pixel Art en estado vacío.
+ * - Keep Awake con toggle fluido y proceso desacoplado.
+ * - Screen Recorder y Screenshot que ocultan el panel antes de capturar el área.
+ * - Cajones interactivos independientes para WiFi y Bluetooth.
+ * - Auto-cierre inteligente al retirar el ratón (con temporizador de seguridad).
+ */
+Item {
+    id: root
+
+    property var theme
+    property bool isOpen: false
+    property bool isMouseInside: false
+    signal closeRequested()
+
+    implicitWidth: 300
+    implicitHeight: 720
+
+    // Estados de Notificaciones
+    property var notifList: []
+    property bool isDnd: false
+
+    // Estados de Keep Awake
+    property bool keepAwakeActive: false
+    property string keepAwakeSince: ""
+
+    // Estados de Grabación
+    property bool isRecording: false
+    property string recordMode: "fullscreen" // "fullscreen" o "region"
+    property string currentRecordingFile: ""
+
+    // Estados de Toggles y Drawers
+    property bool wifiPowered: true
+    property string wifiCurrentSsid: ""
+    property var wifiNetworks: []
+    property bool wifiDrawerOpen: false
+    property string wifiSelectedSsid: ""
+    property string wifiPasswordInput: ""
+    property bool wifiConnecting: false
+
+    property bool btPowered: false
+    property var btDevices: []
+    property bool btDrawerOpen: false
+    property bool btScanning: false
+
+    property bool micMuted: false
+
+    // Temporizador de auto-cierre al salir el ratón
+    Timer {
+        id: autoCloseTimer
+        interval: 800
+        repeat: false
+        onTriggered: {
+            if (!root.isMouseInside && !root.wifiDrawerOpen && !root.btDrawerOpen && !root.isRecording && !passInput.activeFocus) {
+                root.closeRequested();
+            }
+        }
+    }
+
+    // ==========================================
+    // Procesos en Segundo Plano
+    // ==========================================
+
+    // 1. Notificaciones
+    Process {
+        id: notifProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/notif_manager.py", "list"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.notifList = data.notifications || [];
+                    root.isDnd = !!data.dnd;
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: notifActionProc
+        command: []
+        running: false
+        onExited: notifProc.running = true
+    }
+
+    Process {
+        id: dndToggleProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/notif_manager.py", "toggle_dnd"]
+        running: false
+        onExited: notifProc.running = true
+    }
+
+    function clearAllNotifications() {
+        root.notifList = [];
+        notifActionProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/notif_manager.py", "clear"];
+        notifActionProc.running = true;
+    }
+
+    function dismissNotification(nid) {
+        var updated = [];
+        for (var i = 0; i < root.notifList.length; i++) {
+            if (root.notifList[i].id !== nid) updated.push(root.notifList[i]);
+        }
+        root.notifList = updated;
+        notifActionProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/notif_manager.py", "dismiss", nid.toString()];
+        notifActionProc.running = true;
+    }
+
+    function dismissNotif(nid) {
+        root.dismissNotification(nid);
+    }
+
+    function toggleDnd() {
+        root.isDnd = !root.isDnd;
+        dndToggleProc.running = true;
+    }
+
+    // 2. Keep Awake
+    Process {
+        id: keepAwakeProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/keep_awake.sh", "status"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.keepAwakeActive = !!data.active;
+                    root.keepAwakeSince = data.since || "";
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: keepAwakeToggleProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/keep_awake.sh", "toggle"]
+        running: false
+        onExited: keepAwakeProc.running = true
+    }
+
+    // 3. Screen Recorder
+    Process {
+        id: recordStatusProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/screen_record.sh", "status"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.isRecording = !!data.recording;
+                    root.currentRecordingFile = data.file || "";
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: recordActionProc
+        command: []
+        running: false
+        onExited: recordStatusProc.running = true
+    }
+
+    function toggleRecording() {
+        var cmd = root.isRecording ? "stop" : (root.recordMode === "region" ? "start_region" : "start_full");
+        recordActionProc.running = false;
+        recordActionProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/screen_record.sh", cmd];
+        recordActionProc.running = true;
+    }
+
+    // 4. Screenshot
+    Process {
+        id: screenshotProc
+        command: []
+        running: false
+    }
+
+    function takeScreenshot(mode) {
+        screenshotProc.running = false;
+        screenshotProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/screenshot.sh", mode || "region"];
+        screenshotProc.running = true;
+    }
+
+    // 5. Wallpaper Shuffle
+    Process {
+        id: wallChangeProc
+        command: [Quickshell.env("HOME") + "/.config/hypr/scripts/wallchange.sh"]
+        running: false
+    }
+
+    function shuffleWallpaper() {
+        if (!wallChangeProc.running) {
+            wallChangeProc.running = true;
+        }
+    }
+
+    // 6. WiFi
+    Process {
+        id: wifiScanProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/wifi_scan.py"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var list = JSON.parse(this.text) || [];
+                    root.wifiNetworks = list;
+                    for (var i = 0; i < list.length; i++) {
+                        if (list[i].in_use) {
+                            root.wifiCurrentSsid = list[i].ssid;
+                            root.wifiPowered = true;
+                            break;
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: wifiConnectProc
+        command: []
+        running: false
+        onExited: {
+            root.wifiConnecting = false;
+            wifiScanProc.running = true;
+        }
+    }
+
+    function connectWifi(ssid, pass) {
+        root.wifiConnecting = true;
+        wifiConnectProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/wifi_connect.sh", ssid, pass || ""];
+        wifiConnectProc.running = true;
+    }
+
+    // 7. Bluetooth
+    Process {
+        id: btScanProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/bt_scan.py"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.btPowered = !!data.powered;
+                    root.btDevices = data.devices || [];
+                    root.btScanning = false;
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: btConnectProc
+        command: []
+        running: false
+        onExited: btScanProc.running = true
+    }
+
+    function scanBluetooth() {
+        root.btScanning = true;
+        btScanProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/bt_scan.py", "scan"];
+        btScanProc.running = true;
+    }
+
+    function connectBt(mac) {
+        btConnectProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/bt_connect.sh", mac];
+        btConnectProc.running = true;
+    }
+
+    // 8. Micrófono
+    Process {
+        id: micProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/mic_toggle.sh", "status"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.micMuted = !!data.muted;
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: micToggleProc
+        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/mic_toggle.sh", "toggle"]
+        running: false
+        onExited: micProc.running = true
+    }
+
+    function refreshAll() {
+        if (!notifProc.running) notifProc.running = true;
+        if (!keepAwakeProc.running) keepAwakeProc.running = true;
+        if (!recordStatusProc.running) recordStatusProc.running = true;
+        if (!wifiScanProc.running) wifiScanProc.running = true;
+        if (!btScanProc.running) btScanProc.running = true;
+        if (!micProc.running) micProc.running = true;
+    }
+
+    Timer {
+        id: updateTimer
+        interval: 3500
+        running: root.isOpen
+        repeat: true
+        onTriggered: root.refreshAll()
+    }
+
+    onIsOpenChanged: {
+        if (isOpen) {
+            refreshAll();
+        } else {
+            root.wifiDrawerOpen = false;
+            root.btDrawerOpen = false;
+        }
+    }
+
+    Component.onCompleted: {
+        refreshAll();
+    }
+
+    // ==========================================
+    // Contenedor Principal Frosted Glass
+    // ==========================================
+    Rectangle {
+        id: panelCard
+        width: parent.width - 8
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.topMargin: 8
+        anchors.bottomMargin: 8
+        anchors.right: parent.right
+        anchors.rightMargin: 4
+
+        radius: 18
+        color: root.theme ? root.theme.backgroundSolid : "#0d1117"
+        opacity: 0.94
+
+        border.width: 1
+        border.color: root.theme ? root.theme.borderHover : "#00ffcc"
+
+        // Desplazamiento animado GPU fluido
+        transform: Translate {
+            x: root.isOpen ? 0 : 340
+            Behavior on x {
+                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+            }
+        }
+
+        // Resplandor neón superior sutil
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 10
+            height: 1.5
+            color: root.theme ? root.theme.accent : "#00ffcc"
+            opacity: 0.7
+        }
+
+        // Detección de presencia del ratón para el auto-cierre inteligente
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            onEntered: {
+                root.isMouseInside = true;
+                autoCloseTimer.stop();
+            }
+            onPositionChanged: {
+                root.isMouseInside = true;
+                autoCloseTimer.stop();
+            }
+            onExited: {
+                if (mouseX < 0 || mouseX >= width || mouseY < 0 || mouseY >= height) {
+                    root.isMouseInside = false;
+                    autoCloseTimer.restart();
+                }
+            }
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 10
+            spacing: 8
+
+            // ==========================================
+            // 1. ÁREA DE NOTIFICACIONES (Superior)
+            // ==========================================
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: 12
+                color: Qt.rgba(0, 0, 0, 0.25)
+                border.width: 1
+                border.color: Qt.rgba(1, 1, 1, 0.06)
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 6
+
+                    // Header de Notificaciones
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Text {
+                            text: "Notifications"
+                            font.family: root.theme ? root.theme.fontFamily : "monospace"
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: root.theme ? root.theme.text : "#f0f6fc"
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        Rectangle {
+                            visible: root.notifList.length > 0
+                            height: 15
+                            width: notifCountText.implicitWidth + 8
+                            radius: 7.5
+                            color: root.theme ? root.theme.accent : "#00ffcc"
+                            Layout.alignment: Qt.AlignVCenter
+
+                            Text {
+                                id: notifCountText
+                                anchors.centerIn: parent
+                                text: root.notifList.length
+                                font.pixelSize: 8
+                                font.bold: true
+                                color: "#0d1117"
+                            }
+                        }
+
+                        Rectangle {
+                            height: 18
+                            width: dndBadgeRow.implicitWidth + 10
+                            radius: 9
+                            color: root.isDnd ? (root.theme ? root.theme.warning : "#ffb86c") : Qt.rgba(1, 1, 1, 0.08)
+                            border.width: 1
+                            border.color: root.isDnd ? Qt.rgba(1, 1, 1, 0.25) : Qt.rgba(1, 1, 1, 0.08)
+                            Layout.alignment: Qt.AlignVCenter
+
+                            RowLayout {
+                                id: dndBadgeRow
+                                anchors.centerIn: parent
+                                spacing: 3
+                                Text {
+                                    text: root.isDnd ? "🔇" : "🔔"
+                                    font.pixelSize: 8
+                                }
+                                Text {
+                                    text: root.isDnd ? "Silenciado" : "Silenciar"
+                                    font.family: root.theme ? root.theme.fontFamily : "sans-serif"
+                                    font.pixelSize: 8
+                                    font.bold: true
+                                    color: root.isDnd ? "#0d1117" : (dndBadgeMouse.containsMouse ? "#ffffff" : (root.theme ? root.theme.textDim : "#8b949e"))
+                                }
+                            }
+
+                            MouseArea {
+                                id: dndBadgeMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.toggleDnd()
+                            }
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        // Botón Limpiar Todo
+                        Text {
+                            visible: root.notifList.length > 0
+                            text: "Clear All"
+                            font.family: root.theme ? root.theme.fontFamily : "sans-serif"
+                            font.pixelSize: 9
+                            color: clearMouse.containsMouse ? (root.theme ? root.theme.danger : "#ff5555") : (root.theme ? root.theme.textDim : "#6e7681")
+                            Layout.alignment: Qt.AlignVCenter
+
+                            MouseArea {
+                                id: clearMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.clearAllNotifications()
+                            }
+                        }
+
+                        // Botón Cerrar (X Minimalista)
+                        Rectangle {
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: closeMouse.containsMouse ? (root.theme ? root.theme.danger : "#ff5555") : Qt.rgba(1, 1, 1, 0.08)
+                            Layout.alignment: Qt.AlignVCenter
+
+                            Canvas {
+                                id: closeCanvas
+                                anchors.centerIn: parent
+                                width: 9
+                                height: 9
+                                rotation: closeMouse.containsMouse ? 90 : 0
+                                Behavior on rotation { NumberAnimation { duration: 180 } }
+
+                                property color col: closeMouse.containsMouse ? "#ffffff" : (root.theme ? root.theme.textDim : "#6e7681")
+                                onColChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.strokeStyle = col;
+                                    ctx.lineWidth = 1.3;
+                                    ctx.lineCap = "round";
+                                    ctx.beginPath();
+                                    ctx.moveTo(1.2, 1.2); ctx.lineTo(7.8, 7.8);
+                                    ctx.moveTo(7.8, 1.2); ctx.lineTo(1.2, 7.8);
+                                    ctx.stroke();
+                                }
+                            }
+
+                            MouseArea {
+                                id: closeMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.closeRequested()
+                            }
+                        }
+                    }
+
+                    // Contenido: Lista o Empty State con Dino
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        // Estado Vacío (Dino Pixel Art + Cactus)
+                        Column {
+                            visible: root.notifList.length === 0
+                            anchors.centerIn: parent
+                            spacing: 8
+
+                            Canvas {
+                                width: 120
+                                height: 42
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.fillStyle = "#6e7681";
+                                    ctx.strokeStyle = "#6e7681";
+                                    ctx.lineWidth = 1.5;
+
+                                    // Suelo
+                                    ctx.beginPath();
+                                    ctx.moveTo(10, 38); ctx.lineTo(110, 38);
+                                    ctx.stroke();
+
+                                    // Nube
+                                    ctx.beginPath();
+                                    ctx.arc(55, 10, 3.5, 0, Math.PI * 2);
+                                    ctx.arc(61, 8, 5, 0, Math.PI * 2);
+                                    ctx.arc(68, 10, 3.5, 0, Math.PI * 2);
+                                    ctx.stroke();
+
+                                    // Dino
+                                    ctx.fillRect(20, 16, 12, 9);
+                                    ctx.fillRect(29, 13, 7, 7);
+                                    ctx.fillRect(18, 23, 11, 10);
+                                    ctx.fillRect(13, 22, 5, 5);
+                                    ctx.fillRect(20, 33, 3, 4);
+                                    ctx.fillRect(25, 33, 3, 4);
+
+                                    // Cactus
+                                    ctx.fillRect(85, 20, 5, 18);
+                                    ctx.fillRect(80, 24, 5, 3);
+                                    ctx.fillRect(80, 21, 3, 5);
+                                    ctx.fillRect(90, 27, 5, 3);
+                                    ctx.fillRect(92, 24, 3, 5);
+                                }
+                            }
+
+                            Text {
+                                text: "No Notifications"
+                                font.family: root.theme ? root.theme.fontFamily : "monospace"
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: root.theme ? root.theme.textDim : "#6e7681"
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                        }
+
+                        // Lista de Notificaciones
+                        ListView {
+                            visible: root.notifList.length > 0
+                            anchors.fill: parent
+                            clip: true
+                            spacing: 5
+                            model: root.notifList
+
+                            delegate: Rectangle {
+                                width: parent ? parent.width : 260
+                                height: 48
+                                radius: 8
+                                color: notifCardMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
+                                border.width: 1
+                                border.color: notifCardMouse.containsMouse ? (root.theme ? root.theme.accent : "#00ffcc") : Qt.rgba(1, 1, 1, 0.08)
+
+                                MouseArea {
+                                    id: notifCardMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.dismissNotification(modelData.id)
+                                }
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 6
+                                    spacing: 2
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text {
+                                            text: modelData.appname
+                                            font.pixelSize: 8
+                                            font.bold: true
+                                            color: root.theme ? root.theme.accent : "#00ffcc"
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        Text {
+                                            text: modelData.summary
+                                            font.pixelSize: 9
+                                            font.bold: true
+                                            color: "#ffffff"
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                        // Botón X para borrar notificación individual
+                                        Text {
+                                            text: "✕"
+                                            font.pixelSize: 8
+                                            color: notifDelMouse.containsMouse ? "#ff5555" : "#6e7681"
+                                            MouseArea {
+                                                id: notifDelMouse
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.dismissNotification(modelData.id)
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: modelData.body
+                                        font.pixelSize: 8
+                                        color: root.theme ? root.theme.textDim : "#8b949e"
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // 2. KEEP AWAKE CARD (Caffeine)
+            // ==========================================
+            Rectangle {
+                Layout.fillWidth: true
+                height: 52
+                radius: 12
+                color: Qt.rgba(0, 0, 0, 0.30)
+                border.width: 1
+                border.color: root.keepAwakeActive ? (root.theme ? root.theme.accent : "#00ffcc") : Qt.rgba(1, 1, 1, 0.06)
+
+                Behavior on border.color { ColorAnimation { duration: 180 } }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 8
+
+                    Rectangle {
+                        width: 28
+                        height: 28
+                        radius: 14
+                        color: root.keepAwakeActive ? (root.theme ? root.theme.accent : "#00ffcc") : Qt.rgba(1, 1, 1, 0.08)
+
+                        Canvas {
+                            anchors.centerIn: parent
+                            width: 14
+                            height: 14
+                            property color col: root.keepAwakeActive ? "#0d1117" : (root.theme ? root.theme.accent : "#00ffcc")
+                            onColChanged: requestPaint()
+                            Component.onCompleted: requestPaint()
+
+                            onPaint: {
+                                var ctx = getContext("2d");
+                                ctx.reset();
+                                ctx.strokeStyle = col;
+                                ctx.lineWidth = 1.2;
+                                ctx.lineCap = "round";
+                                ctx.beginPath();
+                                ctx.moveTo(2.5, 4.5); ctx.lineTo(9.5, 4.5);
+                                ctx.lineTo(8.5, 11);
+                                ctx.arcTo(8.5, 12.5, 7, 12.5, 1);
+                                ctx.lineTo(4.5, 12.5);
+                                ctx.arcTo(3.5, 12.5, 3.5, 11, 1);
+                                ctx.closePath();
+                                ctx.stroke();
+                                ctx.beginPath();
+                                ctx.arc(9.5, 7.5, 2, -Math.PI * 0.4, Math.PI * 0.4);
+                                ctx.stroke();
+                                ctx.beginPath();
+                                ctx.moveTo(4.5, 3); ctx.lineTo(4.5, 1.2);
+                                ctx.moveTo(7.5, 3); ctx.lineTo(7.5, 1.2);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+
+                    Column {
+                        Layout.fillWidth: true
+                        spacing: 1
+
+                        Text {
+                            text: "Keep Awake"
+                            font.family: root.theme ? root.theme.fontFamily : "sans-serif"
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: "#ffffff"
+                        }
+
+                        Text {
+                            text: root.keepAwakeActive ? ("Active since " + root.keepAwakeSince) : "Preventing sleep mode"
+                            font.family: root.theme ? root.theme.fontFamily : "sans-serif"
+                            font.pixelSize: 8
+                            color: root.keepAwakeActive ? (root.theme ? root.theme.accent : "#00ffcc") : (root.theme ? root.theme.textDim : "#6e7681")
+                        }
+                    }
+
+                    // Toggle Switch estilo iOS
+                    Rectangle {
+                        width: 36
+                        height: 18
+                        radius: 9
+                        color: root.keepAwakeActive ? (root.theme ? root.theme.accent : "#00ffcc") : Qt.rgba(1, 1, 1, 0.15)
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Behavior on color { ColorAnimation { duration: 160 } }
+
+                        Rectangle {
+                            width: 14
+                            height: 14
+                            radius: 7
+                            color: "#ffffff"
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: root.keepAwakeActive ? 19 : 2
+
+                            Behavior on x {
+                                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.keepAwakeActive = !root.keepAwakeActive;
+                                keepAwakeToggleProc.running = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // 3. SCREEN RECORDER & SCREENSHOT CARD
+            // ==========================================
+            Rectangle {
+                Layout.fillWidth: true
+                height: 52
+                radius: 12
+                color: Qt.rgba(0, 0, 0, 0.30)
+                border.width: 1
+                border.color: root.isRecording ? "#ff5555" : Qt.rgba(1, 1, 1, 0.06)
+
+                Behavior on border.color { ColorAnimation { duration: 180 } }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 6
+
+                    // Icono Grabación
+                    Rectangle {
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: root.isRecording ? "#ff5555" : Qt.rgba(1, 1, 1, 0.08)
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: root.isRecording ? 8 : 7
+                            height: root.isRecording ? 8 : 7
+                            radius: root.isRecording ? 2 : 3.5
+                            color: root.isRecording ? "#ffffff" : (root.theme ? root.theme.danger : "#ff5555")
+                        }
+                    }
+
+                    Column {
+                        Layout.fillWidth: true
+                        spacing: 1
+
+                        Text {
+                            text: "Screen Recorder"
+                            font.family: root.theme ? root.theme.fontFamily : "sans-serif"
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: "#ffffff"
+                        }
+
+                        Text {
+                            text: root.isRecording ? "Recording in progress..." : "Recording off"
+                            font.family: root.theme ? root.theme.fontFamily : "sans-serif"
+                            font.pixelSize: 8
+                            color: root.isRecording ? "#ff5555" : (root.theme ? root.theme.textDim : "#6e7681")
+                        }
+                    }
+
+                    // Selector Fullscreen / Area
+                    Rectangle {
+                        height: 20
+                        width: modeRow.implicitWidth + 10
+                        radius: 10
+                        color: Qt.rgba(1, 1, 1, 0.08)
+
+                        Row {
+                            id: modeRow
+                            anchors.centerIn: parent
+                            spacing: 3
+
+                            Text {
+                                text: root.recordMode === "fullscreen" ? "Full" : "Area"
+                                font.family: root.theme ? root.theme.fontFamily : "sans-serif"
+                                font.pixelSize: 8
+                                font.bold: true
+                                color: "#ffffff"
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.recordMode = root.recordMode === "fullscreen" ? "region" : "fullscreen";
+                            }
+                        }
+                    }
+
+                    // Botón REC / STOP
+                    Rectangle {
+                        height: 20
+                        width: 38
+                        radius: 10
+                        color: root.isRecording ? "#ff5555" : (root.theme ? root.theme.accent : "#00ffcc")
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.isRecording ? "STOP" : "REC"
+                            font.family: root.theme ? root.theme.fontFamily : "monospace"
+                            font.pixelSize: 8
+                            font.bold: true
+                            color: "#0d1117"
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.toggleRecording()
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // DRAWER DESPLEGABLE: Selector de WiFi
+            // ==========================================
+            Rectangle {
+                visible: root.wifiDrawerOpen
+                Layout.fillWidth: true
+                Layout.preferredHeight: root.wifiDrawerOpen ? 140 : 0
+                implicitHeight: root.wifiDrawerOpen ? 140 : 0
+                radius: 10
+                color: Qt.rgba(0, 0, 0, 0.45)
+                border.width: 1
+                border.color: root.theme ? root.theme.accent : "#00ffcc"
+                clip: true
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 4
+
+                    Text {
+                        text: "Redes WiFi Disponibles"
+                        font.pixelSize: 8
+                        font.bold: true
+                        color: root.theme ? root.theme.accent : "#00ffcc"
+                    }
+
+                    ListView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        spacing: 3
+                        model: root.wifiNetworks
+
+                        delegate: Rectangle {
+                            width: parent ? parent.width : 260
+                            height: 22
+                            radius: 4
+                            color: (root.wifiSelectedSsid === modelData.ssid) 
+                                   ? Qt.rgba(1, 1, 1, 0.15) 
+                                   : (wifiItemMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent")
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 4
+                                anchors.rightMargin: 4
+
+                                Text {
+                                    text: (modelData.in_use ? "● " : "") + modelData.ssid
+                                    font.pixelSize: 8
+                                    font.bold: modelData.in_use
+                                    color: modelData.in_use ? (root.theme ? root.theme.accent : "#00ffcc") : "#ffffff"
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+
+                                Text {
+                                    text: modelData.signal + "%"
+                                    font.pixelSize: 7
+                                    color: root.theme ? root.theme.textDim : "#6e7681"
+                                }
+                            }
+
+                            MouseArea {
+                                id: wifiItemMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.wifiSelectedSsid = modelData.ssid;
+                                    passInput.forceActiveFocus();
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 20
+                            radius: 4
+                            color: Qt.rgba(0, 0, 0, 0.5)
+                            border.width: 1
+                            border.color: Qt.rgba(1, 1, 1, 0.1)
+
+                            TextInput {
+                                id: passInput
+                                anchors.fill: parent
+                                anchors.leftMargin: 6
+                                anchors.rightMargin: 6
+                                verticalAlignment: TextInput.AlignVCenter
+                                font.pixelSize: 8
+                                color: "#ffffff"
+                                echoMode: TextInput.Password
+                                text: root.wifiPasswordInput
+                                onTextChanged: root.wifiPasswordInput = text
+
+                                Text {
+                                    text: root.wifiSelectedSsid ? ("Clave para " + root.wifiSelectedSsid) : "Selecciona una red..."
+                                    font.pixelSize: 8
+                                    color: Qt.rgba(1, 1, 1, 0.3)
+                                    visible: parent.text.length === 0
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            width: 50
+                            height: 20
+                            radius: 4
+                            color: root.theme ? root.theme.accent : "#00ffcc"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: root.wifiConnecting ? "..." : "Conectar"
+                                font.pixelSize: 8
+                                font.bold: true
+                                color: "#0d1117"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (root.wifiSelectedSsid) {
+                                        root.connectWifi(root.wifiSelectedSsid, root.wifiPasswordInput);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // DRAWER DESPLEGABLE: Selector de Bluetooth
+            // ==========================================
+            Rectangle {
+                visible: root.btDrawerOpen
+                Layout.fillWidth: true
+                Layout.preferredHeight: root.btDrawerOpen ? 140 : 0
+                implicitHeight: root.btDrawerOpen ? 140 : 0
+                radius: 10
+                color: Qt.rgba(0, 0, 0, 0.45)
+                border.width: 1
+                border.color: root.theme ? root.theme.accentAlt : "#bd93f9"
+                clip: true
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 4
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text {
+                            text: "Dispositivos Bluetooth"
+                            font.pixelSize: 8
+                            font.bold: true
+                            color: root.theme ? root.theme.accentAlt : "#bd93f9"
+                        }
+                        Item { Layout.fillWidth: true }
+                        // Botón Escanear
+                        Text {
+                            text: root.btScanning ? "Buscando..." : "Buscar"
+                            font.pixelSize: 8
+                            color: root.theme ? root.theme.accent : "#00ffcc"
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.scanBluetooth()
+                            }
+                        }
+                    }
+
+                    ListView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        spacing: 3
+                        model: root.btDevices
+
+                        delegate: Rectangle {
+                            width: parent ? parent.width : 260
+                            height: 22
+                            radius: 4
+                            color: modelData.connected ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 4
+                                anchors.rightMargin: 4
+
+                                Text {
+                                    text: (modelData.connected ? "● " : "○ ") + modelData.name
+                                    font.pixelSize: 8
+                                    font.bold: modelData.connected
+                                    color: modelData.connected ? (root.theme ? root.theme.accentAlt : "#bd93f9") : "#ffffff"
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+
+                                Text {
+                                    text: modelData.connected ? "Desconectar" : "Conectar"
+                                    font.pixelSize: 7
+                                    color: root.theme ? root.theme.textDim : "#6e7681"
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.connectBt(modelData.mac)
+                            }
+                        }
+                    }
+
+                    Text {
+                        visible: root.btDevices.length === 0
+                        text: "Sin dispositivos vinculados"
+                        font.pixelSize: 8
+                        color: root.theme ? root.theme.textDim : "#6e7681"
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                }
+            }
+
+            // ==========================================
+            // 4. QUICK TOGGLES (Inferior con 6 Botones)
+            // ==========================================
+            Rectangle {
+                Layout.fillWidth: true
+                height: 54
+                radius: 12
+                color: Qt.rgba(0, 0, 0, 0.30)
+                border.width: 1
+                border.color: Qt.rgba(1, 1, 1, 0.06)
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 3
+
+                    Text {
+                        text: "Quick Toggles"
+                        font.family: root.theme ? root.theme.fontFamily : "sans-serif"
+                        font.pixelSize: 8
+                        font.bold: true
+                        color: root.theme ? root.theme.textDim : "#6e7681"
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        // 1. WiFi Toggle
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 26
+                            radius: 13
+                            color: root.wifiPowered ? (root.theme ? root.theme.accent : "#00ffcc") : Qt.rgba(1, 1, 1, 0.08)
+
+                            Canvas {
+                                anchors.centerIn: parent
+                                width: 13
+                                height: 13
+                                property color col: root.wifiPowered ? "#0d1117" : (root.theme ? root.theme.textDim : "#6e7681")
+                                onColChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.strokeStyle = col;
+                                    ctx.fillStyle = col;
+                                    ctx.lineWidth = 1.3;
+                                    ctx.lineCap = "round";
+                                    ctx.beginPath();
+                                    ctx.arc(6.5, 9.5, 5.5, -Math.PI * 0.75, -Math.PI * 0.25);
+                                    ctx.stroke();
+                                    ctx.beginPath();
+                                    ctx.arc(6.5, 9.5, 3.5, -Math.PI * 0.75, -Math.PI * 0.25);
+                                    ctx.stroke();
+                                    ctx.beginPath();
+                                    ctx.arc(6.5, 10, 1.1, 0, Math.PI * 2);
+                                    ctx.fill();
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.wifiDrawerOpen = !root.wifiDrawerOpen;
+                                    root.btDrawerOpen = false;
+                                }
+                            }
+                        }
+
+                        // 2. Bluetooth Toggle
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 26
+                            radius: 13
+                            color: root.btPowered ? (root.theme ? root.theme.accentAlt : "#bd93f9") : Qt.rgba(1, 1, 1, 0.08)
+
+                            Canvas {
+                                anchors.centerIn: parent
+                                width: 13
+                                height: 13
+                                property color col: root.btPowered ? "#0d1117" : (root.theme ? root.theme.textDim : "#6e7681")
+                                onColChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.strokeStyle = col;
+                                    ctx.lineWidth = 1.3;
+                                    ctx.lineCap = "round";
+                                    ctx.lineJoin = "round";
+                                    ctx.beginPath();
+                                    ctx.moveTo(6.5, 1.5);
+                                    ctx.lineTo(6.5, 11.5);
+                                    ctx.lineTo(9.5, 8.5);
+                                    ctx.lineTo(3.5, 4);
+                                    ctx.moveTo(3.5, 8.5);
+                                    ctx.lineTo(9.5, 4);
+                                    ctx.lineTo(6.5, 1.5);
+                                    ctx.stroke();
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.btDrawerOpen = !root.btDrawerOpen;
+                                    root.wifiDrawerOpen = false;
+                                    if (root.btDrawerOpen) {
+                                        root.scanBluetooth();
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. Micrófono Toggle
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 26
+                            radius: 13
+                            color: root.micMuted ? (root.theme ? root.theme.danger : "#ff5555") : Qt.rgba(1, 1, 1, 0.08)
+
+                            Canvas {
+                                anchors.centerIn: parent
+                                width: 13
+                                height: 13
+                                property color col: root.micMuted ? "#ffffff" : (root.theme ? root.theme.text : "#f0f6fc")
+                                onColChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.strokeStyle = col;
+                                    ctx.fillStyle = col;
+                                    ctx.lineWidth = 1.2;
+                                    ctx.lineCap = "round";
+                                    ctx.strokeRect(4.8, 1.8, 3.4, 5.8);
+                                    ctx.beginPath();
+                                    ctx.arc(6.5, 5.5, 3.4, 0, Math.PI);
+                                    ctx.stroke();
+                                    ctx.beginPath();
+                                    ctx.moveTo(6.5, 9.0); ctx.lineTo(6.5, 11.5);
+                                    ctx.moveTo(4.5, 11.5); ctx.lineTo(8.5, 11.5);
+                                    ctx.stroke();
+                                    if (root.micMuted) {
+                                        ctx.beginPath();
+                                        ctx.lineWidth = 1.4;
+                                        ctx.moveTo(2, 2); ctx.lineTo(11, 11);
+                                        ctx.stroke();
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: micToggleProc.running = true
+                            }
+                        }
+
+                        // 4. Do Not Disturb (DND)
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 26
+                            radius: 13
+                            color: root.isDnd ? (root.theme ? root.theme.warning : "#ffb86c") : Qt.rgba(1, 1, 1, 0.08)
+
+                            Canvas {
+                                anchors.centerIn: parent
+                                width: 13
+                                height: 13
+                                property color col: root.isDnd ? "#0d1117" : (root.theme ? root.theme.text : "#f0f6fc")
+                                onColChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.strokeStyle = col;
+                                    ctx.fillStyle = col;
+                                    ctx.lineWidth = 1.2;
+                                    ctx.lineCap = "round";
+                                    ctx.lineJoin = "round";
+                                    ctx.beginPath();
+                                    ctx.arc(6.5, 2, 0.7, 0, Math.PI * 2);
+                                    ctx.stroke();
+                                    ctx.beginPath();
+                                    ctx.moveTo(4, 9); ctx.lineTo(9, 9);
+                                    ctx.lineTo(8.5, 6);
+                                    ctx.arcTo(8.5, 3, 6.5, 3, 2);
+                                    ctx.arcTo(4.5, 3, 4.5, 6, 2);
+                                    ctx.lineTo(4, 9);
+                                    ctx.stroke();
+                                    ctx.beginPath();
+                                    ctx.arc(6.5, 10, 0.9, 0, Math.PI * 2);
+                                    ctx.fill();
+                                    if (root.isDnd) {
+                                        ctx.beginPath();
+                                        ctx.lineWidth = 1.4;
+                                        ctx.moveTo(2, 2); ctx.lineTo(11, 11);
+                                        ctx.stroke();
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.toggleDnd()
+                            }
+                        }
+
+                        // 5. Captura de Pantalla
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 26
+                            radius: 13
+                            color: Qt.rgba(1, 1, 1, 0.08)
+
+                            Canvas {
+                                anchors.centerIn: parent
+                                width: 13
+                                height: 13
+                                property color col: root.theme ? root.theme.textDim : "#6e7681"
+                                onColChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.strokeStyle = col;
+                                    ctx.lineWidth = 1.2;
+                                    ctx.lineCap = "round";
+                                    ctx.lineJoin = "round";
+                                    ctx.beginPath();
+                                    ctx.moveTo(4.5, 3.5); ctx.lineTo(5.5, 2); ctx.lineTo(7.5, 2); ctx.lineTo(8.5, 3.5);
+                                    ctx.stroke();
+                                    ctx.strokeRect(2, 3.5, 9, 7.5);
+                                    ctx.beginPath();
+                                    ctx.arc(6.5, 7.2, 2, 0, Math.PI * 2);
+                                    ctx.stroke();
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onClicked: (mouse) => {
+                                    if (mouse.button === Qt.RightButton) {
+                                        root.takeScreenshot("fullscreen");
+                                    } else {
+                                        root.takeScreenshot(root.recordMode === "fullscreen" ? "fullscreen" : "region");
+                                    }
+                                }
+                            }
+                        }
+
+                        // 6. Wallpaper Shuffle
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 26
+                            radius: 13
+                            color: wallChangeProc.running ? (root.theme ? root.theme.accent : "#00ffcc") : (diceMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.08))
+
+                            Canvas {
+                                id: diceCanvas
+                                anchors.centerIn: parent
+                                width: 13
+                                height: 13
+                                property color col: wallChangeProc.running ? "#0d1117" : (root.theme ? root.theme.textDim : "#6e7681")
+                                onColChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+
+                                RotationAnimator on rotation {
+                                    running: wallChangeProc.running
+                                    loops: Animation.Infinite
+                                    from: 0
+                                    to: 360
+                                    duration: 600
+                                }
+
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.strokeStyle = col;
+                                    ctx.fillStyle = col;
+                                    ctx.lineWidth = 1.2;
+                                    ctx.strokeRect(2, 2, 9, 9);
+                                    ctx.beginPath();
+                                    ctx.arc(4.5, 4.5, 0.8, 0, Math.PI * 2);
+                                    ctx.arc(6.5, 6.5, 0.8, 0, Math.PI * 2);
+                                    ctx.arc(8.5, 8.5, 0.8, 0, Math.PI * 2);
+                                    ctx.fill();
+                                }
+                            }
+
+                            MouseArea {
+                                id: diceMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.shuffleWallpaper()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
