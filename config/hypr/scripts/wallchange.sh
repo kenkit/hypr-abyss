@@ -62,14 +62,14 @@ if [[ -n "$WP_CMD" ]]; then
     $WP_CMD img "$wp_target" 2>/dev/null
 fi
 
-# 5. Extraer paleta de 16 colores con Pywal
-wal -i "$wal_target" -n -q 2>/dev/null || true
+# 5. Extraer paleta de 16 colores con Pywal de forma rápida
+wal -i "$wal_target" -n -q -s -t -e 2>/dev/null || true
 mkdir -p "$HOME/.config/hypr/.cache"
 ln -sf "$wal_target" "$HOME/.config/hypr/.cache/current_wallpaper.png"
 
-# 6. Recargar colores en caliente en Kitty
+# 6. Recargar colores en caliente en Kitty con timeout estricto para evitar retrasos de inicio
 if pgrep -x kitty >/dev/null; then
-    kitty @ set-colors --all "$HOME/.cache/wal/colors-kitty.conf" 2>/dev/null || true
+    timeout 0.2s kitty @ --to unix:@mykitty set-colors --all "$HOME/.cache/wal/colors-kitty.conf" 2>/dev/null || true
 fi
 
 # 7. Recargar Hyprland y Dunst para sincronizar colores

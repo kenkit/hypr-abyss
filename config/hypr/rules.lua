@@ -60,11 +60,26 @@ hl.window_rule({
     match = { class = "^zoom$" },
     float = true,
 })
--- Forzar flotante y centrado para diálogos modales y ventanas emergentes
+-- Forzar flotante, centrado y tamaño controlado para diálogos modales y selectores de archivos
 hl.window_rule({
-    match = { title = ".*(modificado|guardar|Save|Open|Confirm).*" },
+    name = "file-pickers-dialogs",
+    match = {
+        title = ".*(Carga de archivos|Abrir archivo|modificado|guardar|Save|Open|Confirm).*",
+    },
     float = true,
     center = true,
+    size = "900 600",
+})
+
+-- Selector de archivos del portal GTK/Wayland
+hl.window_rule({
+    name = "gtk-portal-file-picker",
+    match = {
+        class = "xdg-desktop-portal-gtk",
+    },
+    float = true,
+    center = true,
+    size = "900 600",
 })
 
 
@@ -73,3 +88,23 @@ hl.window_rule({
     match = { float = true },
     center = true,
 })
+
+-- Ventana flotante y centrada para el Actualizador del Sistema
+hl.window_rule({
+    name = "arch-updater-floating",
+    match = { class = "arch-updater" },
+    float = true,
+    center = true,
+    size = "920 620",
+})
+
+-- Ventana flotante, centrada y estética para MuseCLI Music Player
+hl.window_rule({
+    name = "musecli-floating",
+    match = { class = "musecli" },
+    float = true,
+    center = true,
+    size = "1060 680",
+    opacity = "0.92 0.85",
+})
+

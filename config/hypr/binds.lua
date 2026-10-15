@@ -1,17 +1,19 @@
 local mainMod = "SUPER"
+local home = os.getenv("HOME") or "/home/david-tineo"
 
 local terminal    = "kitty"
 local fileManager = "thunar"
 local menu        = "pkill rofi || rofi -show drun -show-icons"
-local navegador ="zen-browser"
+local toggleZen   = home .. "/.config/hypr/scripts/toggle_zen.sh"
 -- Aplicaciones y control de ventanas
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
+hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(home .. "/.config/quickshell/scripts/music_control.sh quit; quickshell ipc call musicplayer close"))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + X", hl.dsp.exec_cmd(navegador))
+hl.bind(mainMod .. " + X", hl.dsp.exec_cmd(toggleZen))
 hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("hyprctl dispatch exit"))
 hl.bind("Print", hl.dsp.exec_cmd('grim -g "$(slurp)" - | swappy -f -'))
@@ -21,7 +23,6 @@ hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("zeditor"))
 -- Captura directa de toda la pantalla al portapapeles con Super + Print
 hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd("grim - | wl-copy"))
 
-local home = os.getenv("HOME")
 
 -- Atajo para cambiar Wallpaper + Recargar tema dinámico
 hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(home .. "/.config/hypr/scripts/wallchange.sh"))
@@ -34,6 +35,15 @@ hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("quickshell ipc call controlcenter to
 
 -- Atajo para abrir Menú de Energía y Apagado (Super + P)
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("quickshell ipc call powermenu toggle"))
+
+-- Atajo para mostrar/ocultar Reloj de Escritorio (Super + B)
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("quickshell ipc call clock toggle"))
+
+-- Atajo para Actualización Segura del Sistema (Super + U)
+hl.bind(mainMod .. " + U", hl.dsp.exec_cmd("kitty --class arch-updater --title 'Actualización del Sistema Arch Linux' -e " .. home .. "/.config/hypr/scripts/system_update.sh"))
+
+-- Atajo para Reproductor de Música (Super + Y)
+hl.bind(mainMod .. " + Y", hl.dsp.exec_cmd("quickshell ipc call musicplayer toggle"))
 
 -- Navegación con flechas
 hl.bind(mainMod .. " + left",  hl.dsp.focus({ direction = "left" }))
@@ -60,3 +70,24 @@ hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd(volScript .. " --toggle-mic"), {
 hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(brightScript .. " up"),   { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(brightScript .. " down"), { locked = true, repeating = true })
 
+-- ==============================================================================
+-- Control de Ventanas, Fullscreen y Modo Compacto (Super + D)
+-- ==============================================================================
+
+hl.bind(mainMod .. " + D", function()
+    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
+    hl.dispatch(hl.dsp.window.resize({ x = 960, y = 560, relative = false }))
+    hl.dispatch(hl.dsp.window.center())
+end)
+
+-- Super + SHIFT + F: Alternar flotante normal
+hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.float({ action = "toggle" }))
+
+-- ==============================================================================
+-- Control con el Ratón (Mouse Binds oficiales de Hyprland Lua)
+-- ==============================================================================
+
+hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
+
+-- Super + Clic Derecho (mouse:273): Cambiar el tamaño de la ventana con el ratón
+hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
