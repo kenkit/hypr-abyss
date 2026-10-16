@@ -15,7 +15,7 @@
     progress_bar_min_width = 150
     progress_bar_max_width = 300
     progress_bar_corner_radius = 4
-    highlight = "#4291B7"
+    highlight = "#B99190"
 
     ### Apariencia Frosted Glass ###
     transparency = 12
@@ -25,7 +25,7 @@
     text_icon_padding = 10
     frame_width = 1
     corner_radius = 14
-    frame_color = "#4291B7"
+    frame_color = "#B99190"
     separator_color = frame
 
     ### Tipografía y Formato ###
@@ -62,22 +62,22 @@
     mouse_right_click = close_all
 
 [urgency_low]
-    background = "#13161f"
-    foreground = "#d9dbd4"
-    frame_color = "#4B7291"
+    background = "#00061B"
+    foreground = "#eed9c5"
+    frame_color = "#E49069"
     timeout = 4
     script = /home/tony/.config/dunst/sound.sh
 
 [urgency_normal]
-    background = "#13161f"
-    foreground = "#d9dbd4"
-    frame_color = "#4291B7"
+    background = "#00061B"
+    foreground = "#eed9c5"
+    frame_color = "#B99190"
     timeout = 6
     script = /home/tony/.config/dunst/sound.sh
 
 [urgency_critical]
     background = "#1a0808"
     foreground = "#ff7b72"
-    frame_color = "#2E6490"
+    frame_color = "#A86D63"
     timeout = 0
     script = /home/tony/.config/dunst/sound.sh
