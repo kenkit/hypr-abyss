@@ -8,8 +8,8 @@ destination="$HOME/.config/hypr/hyprlock.conf"
 
 set_lockscreen() {
     local theme=$1
-    ln -sf "$theme" "$destination"
-    notify-send "Hyprlock" "Tema cambiado a: $(basename "$theme" .conf)" -i dialog-information 2>/dev/null
+    ln -sf "lockscreens/$(basename "$theme")" "$destination"
+    notify-send "Hyprlock" "Theme changed to: $(basename "$theme" .conf)" -i dialog-information 2>/dev/null
 }
 
 if command -v rofi >/dev/null 2>&1; then

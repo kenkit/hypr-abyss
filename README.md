@@ -1,99 +1,152 @@
-# 🚀 Quickshell Dynamic Island (Cyberpunk / Hacker Aesthetic)
+# 🌌 Hypr-Abyss (Cyberpunk / Frosted Glass Setup)
 
-Dynamic Island minimalista y semitransparente estilo frosted glass desarrollada en **QML (QtQuick)** y **Quickshell** para **Hyprland** en Arch Linux.
+<div align="center">
 
----
+[![Hyprland](https://img.shields.io/badge/Hyprland-0.56+-00ffff?style=for-the-badge&logo=archlinux)](https://hyprland.org)
+[![Quickshell](https://img.shields.io/badge/Quickshell-QML-ff007f?style=for-the-badge&logo=qt)](https://quickshell.outfoxxed.me)
+[![Pywal](https://img.shields.io/badge/Pywal-Dynamic_Colors-bd93f9?style=for-the-badge)](https://github.com/dylanaraps/pywal)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)]()
 
-## 🎨 Características de Diseño y Estética
+**A state-of-the-art, ultra-lightweight Cyberpunk / Frosted Glass desktop setup for Hyprland and Quickshell.**  
+Designed for minimal CPU usage (idles at 1-3% CPU), dynamic Pywal theme synchronization, draggable desktop widgets, and standalone YouTube music streaming.
 
-- **Formato Cápsula Flotante (Dynamic Island)**: Centrada en el margen superior (`anchors.top`, `anchors.horizontalCenter`).
-- **Frosted Glass Semitransparente**: Fondo con tintado profundo (`#aa0d1117` / variable Pywal al 75% de opacidad), desenfoque Wayland (`BackgroundEffect` y `layerrule`) y esquinas redondeadas (`radius: 20`).
-- **Animaciones Fluidas**: Expansión y contracción suaves controladas por `NumberAnimation` con curvas `Easing.OutQuad`.
-- **Sincronización Dinámica con Pywal**: Lee y vigila reactivamente `~/.cache/wal/colors.json`. Cambia automáticamente la paleta de colores y el borde al actualizar el wallpaper.
-- **Click-Through Inteligente**: La ventana utiliza una máscara de clic (`mask: Region { item: island }`), permitiendo interactuar con cualquier ventana detrás de la barra fuera de la cápsula.
+[English](#-english) | [Español](#-español)
 
----
-
-## 🧩 Módulos Integrados
-
-1. **Workspaces Cyberpunk / Pacman (Hyprland)**:
-   - Los números se han sustituido por el icónico carácter **`ᗧ`** cuando hay al menos una aplicación abierta en el espacio de trabajo.
-   - Los espacios vacíos muestran un punto minimalista `·`.
-   - Resplandor y animación neón reactiva en el espacio enfocado.
-   - Clic directo para cambiar de espacio y soporte para rueda del ratón (`workspace e-1` / `workspace e+1`).
-
-2. **Reloj Estilizado**:
-   - Cápsula integrada con micro-icono `󰥔`, tipografía `JetBrainsMono Nerd Font` y dos puntos parpadeantes.
-   - Al pasar el cursor o hacer clic, despliega la fecha formateada (`DOM 4 OCT`).
-
-3. **Módulo de Hardware y Conectividad (Sin RAM)**:
-   - **CPU**: Consumo discreto en tiempo real (`󰻠 08%`).
-   - **WiFi**: Icono dinámico según la calidad de la señal (`󰤨`), con visualización del SSID al pasar el cursor.
-   - **Bluetooth**: Estado activo (`󰂯`) o inactivo (`󰂲`) con nombre del dispositivo conectado.
-   - **Batería**: Porcentaje (`100%`), icono inteligente (`󰁹` / `󰂄` en carga) y colores dinámicos (Verde > 30%, Ámbar 15-30%, Rojo < 15%).
-
-4. **Media / Audio (MPRIS Dynamic Island)**:
-   - Se activa automáticamente cuando hay música reproduciéndose (Spotify, mpv, Firefox, etc.).
-   - Expande fluidamente la cápsula para revelar:
-     - **Ecualizador animado de 4 barras** con ritmo visual.
-     - Título y artista de la pista con elipsis limpia.
-     - Controles interactivos: `⏮` Anterior, `⏯` Play/Pause, `⏭` Siguiente.
-     - Indicador y control de volumen con soporte para rueda del ratón y clic en la barra.
+</div>
 
 ---
 
-## 📂 Estructura de Archivos
+## 🇺🇸 English
 
-```
-~/.config/quickshell/
-├── shell.qml                     # Entrada principal, capa Wayland y multi-monitor
-├── Theme.qml                     # Motor de temas y sincronización con Pywal
-├── components/
-│   ├── DynamicIsland.qml         # Cápsula principal con animación y layout dinámico
-│   ├── Workspaces.qml            # Indicadores de workspaces para Hyprland
-│   ├── ClockWidget.qml           # Reloj y fecha monospace
-│   ├── HackerStats.qml           # Medidor de CPU y RAM
-│   └── MediaIsland.qml           # Módulo de música MPRIS y volumen
-├── scripts/
-│   └── stats.sh                  # Script optimizado en bash/awk para métricas
-├── examples/
-│   └── colors.json               # Paleta de muestra Pywal cyberpunk
-└── README.md
-```
+### ✨ Key Features
+
+1. **🏝️ Dynamic Island Bar**
+   - Floating frosted-glass capsule centered at the top of the screen.
+   - **Pacman / Cyberpunk Workspaces**: Icons turn into `ᗧ` when windows are active, with glowing neon indicators.
+   - **Hardware Telemetry**: Real-time CPU, WiFi signal, Bluetooth connection, and Battery status.
+   - **Expanded MPRIS Media Island**: When music plays, the island automatically expands to reveal an animated 4-bar visualizer, title/artist marquee, volume bar, and playback controls (`⏮`, `⏯`, `⏭`).
+   - Automatically hides when entering full-screen mode (`Super + F`).
+
+2. **⏰ Retro Draggable Desktop Clock Widget (`Super + B`)**
+   - Inspired by vintage Material You aesthetics with deep emerald green `#1D3D37`, peach digits `#F9B49E`, and pastel accents.
+   - **Freely Draggable**: Drag it anywhere across your monitor with the mouse.
+   - **Persistent Config**: Coordinates, scale, language, and theme are saved automatically to `clock_config.json`.
+   - **Interactive Menu**: Click the gear icon to toggle 12h/24h format, language (English / Spanish), themes (Retro, Pywal, Cyberpunk, Cream), scale slider, and position lock.
+
+3. **🎵 Aura Music Player (`Super + Y`)**
+   - High-performance, lightweight floating music player powered by `mpv`, `yt-dlp`, and `socat`.
+   - **Instant Search & Daily Mix**: Type any song or artist, and enjoy automatic YouTube Mix / Radio recommendations.
+   - **Favorites Playlist**: Heart songs to save them to your personal favorites collection (`favorites.json`).
+   - **Draggable & Resizable Window**: Drag the header to position the player anywhere.
+   - **Seamless Scrubbing & Volume**: Smooth progress bar with elapsed/total time and volume slider.
+   - **One-Key Termination (`Super + R`)**: Closes the player and cleanly stops all background audio.
+
+4. **🎛️ Control Center & Quick Settings (`Super + N` / Click Clock)**
+   - Smooth right-side sliding panel.
+   - **WiFi Scanner**: View available networks, signal strength, and connect with 1-click.
+   - **Bluetooth Manager**: Scan, pair, connect, and disconnect devices.
+   - **System Sliders**: Interactive audio volume and display brightness controls with OSD feedback.
+   - **Quick Actions**: Screenshots (region/fullscreen with shutter sound), Screen Recorder (`wf-recorder` with mixed audio), Keep Awake (caffeine sleep inhibitor), and Do Not Disturb (DND).
+
+5. **⚡ Power & Session Menu (`Super + P`)**
+   - Cyberpunk frosted-glass modal with full keyboard navigation (`1-5`, `Esc`, `L`, `E`, `R`, `P`, `S`).
+   - Cross-distro compatible shutdown and reboot (`systemctl` + `loginctl` fallback).
+   - Confirmation dialogs to prevent accidental shutdowns.
+
+6. **🖼️ Live Wallpaper Selector (`Super + V` & `Super + W`)**
+   - **Super + V**: Bottom sliding drawer with visual thumbnail cards of all wallpapers in `~/Pictures/Wallpapers`.
+   - **Super + W**: Cycles to a random wallpaper with smooth transition animations.
+   - Automatic Pywal color extraction that immediately updates Kitty, Dunst, Quickshell, and Hyprland without restarting.
 
 ---
-IMAGENES
-<img width="1920" height="1080" alt="screenshot_2026-10-06_22-25-47" src="https://github.com/user-attachments/assets/2d47f0a6-040b-474f-bede-ac51774917f2" />
-<img width="903" height="443" alt="swappy-20261006_222611" src="https://github.com/user-attachments/assets/ae1ca7f2-4d8c-41b5-9ddd-638c1028c9f2" />
-<img width="1920" height="1080" alt="swappy-20261006_222627" src="https://github.com/user-attachments/assets/87444f2d-24e4-4782-9be4-60b6bc2f8c61" />
-<img width="1920" height="1080" alt="swappy-20261006_222646" src="https://github.com/user-attachments/assets/9035749a-27b5-4801-93ab-318d8ba9b04c" />
-<img width="1138" height="212" alt="swappy-20261006_222717" src="https://github.com/user-attachments/assets/f2044b39-2071-4240-9543-69cfcbb362ca" />
-<img width="924" height="411" alt="swappy-20261006_223117" src="https://github.com/user-attachments/assets/3274ad8a-9a90-4f87-9f7e-6d569abbe97f" />
 
+### ⌨️ Keybindings Cheat Sheet
 
+| Keybinding | Action | Description |
+|---|---|---|
+| `Super + Y` | **Aura Music Player** | Open/close floating YouTube music player & mix |
+| `Super + R` | **Stop Music & Close** | Kill audio process and close music player |
+| `Super + B` | **Toggle Desktop Clock** | Show/hide draggable retro desktop clock widget |
+| `Super + N` | **Control Center** | Toggle WiFi, Bluetooth, Quick Toggles & Sliders |
+| `Super + P` | **Power Menu** | Open Lock, Logout, Reboot, Shutdown menu |
+| `Super + V` | **Wallpaper Selector** | Open bottom visual wallpaper carousel |
+| `Super + W` | **Random Wallpaper** | Switch wallpaper & synchronize Pywal theme |
+| `Super + Z` | **Terminal** | Launch Kitty terminal |
+| `Super + A` | **Application Launcher**| Open Rofi drun application menu |
+| `Super + E` | **File Manager** | Launch Thunar file manager |
+| `Super + X` | **Zen Browser** | Open Zen Browser / Scratchpad |
+| `Super + Q` | **Close Window** | Close active focused window |
+| `Super + F` | **Fullscreen** | Toggle window fullscreen (auto-hides island) |
+| `Super + Shift + F` | **Floating** | Toggle window floating state |
+| `Super + D` | **Center Floating** | Resize active window to 960x560 and center |
+| `Print` | **Capture Region** | Interactive area screenshot to Swappy |
+| `Super + Print`| **Full Screenshot** | Copy full desktop screenshot to clipboard |
 
+---
 
-## ⚡ Ejecución y Pruebas
+### 📦 Dependencies
 
-Para ejecutar la Dynamic Island en primer plano y verificar registros:
+Install the following packages on Arch Linux:
+
 ```bash
-quickshell
+# Core window manager & shell
+sudo pacman -S hyprland kitty rofi dunst pipewire wireplumber pamixer brightnessctl grim slurp wl-clipboard
+
+# Quickshell (available in Arch AUR)
+yay -S quickshell-git
+
+# Audio & Music Player
+sudo pacman -S mpv socat yt-dlp playerctl
+
+# Theming & Wallpaper
+sudo pacman -S python-pywal python-gobject swww
+
+# Fonts
+sudo pacman -S ttf-jetbrains-mono-nerd ttf-font-awesome noto-fonts-emoji
 ```
 
-O especificando el directorio explícitamente:
+---
+
+### 🚀 One-Command Installation
+
+Clone the repository and run the automated installer:
+
 ```bash
-quickshell -p ~/.config/quickshell
+git clone https://github.com/respaldoperez348-rgb/hypr-abyss.git ~/hypr-abyss
+cd ~/hypr-abyss
+./install.sh
 ```
 
-### Autostart en Hyprland
-Ya configurado en `~/.config/hypr/autostart.lua`:
-```lua
-hl.exec_cmd("quickshell")
+The installer will:
+1. Detect your package manager and install any missing dependencies.
+2. Backup any existing configuration folders to `~/.config.bak.<timestamp>`.
+3. Copy all dotfiles to `~/.config/`.
+4. Ensure all helper scripts have executable permissions (`chmod +x`).
+5. Create `~/Pictures/Wallpapers` with a sample starter wallpaper.
+
+---
+
+## 🇪🇸 Español
+
+### ✨ Características Principales
+
+- **Dynamic Island Flotante**: Cápsula de vidrio esmerilado en la parte superior con workspaces estilo Pacman, telemetría de CPU/WiFi/BT/Batería y módulo MPRIS dinámico con ecualizador animado de 4 barras.
+- **Reloj de Escritorio Retro Arrastrable (`Super + B`)**: Widget estilo Material You con persistencia de posición en pantalla, selector de temas, escala y formato 12h/24h.
+- **Reproductor de Música Aura Music (`Super + Y`)**: Transmisión de audio directa de YouTube en segundo plano (MPV + yt-dlp + socat), recomendación de Mix Diario, guardado de favoritos y cierre instantáneo con `Super + R`.
+- **Centro de Control (`Super + N`)**: Gestión rápida de redes WiFi, dispositivos Bluetooth, control de brillo/volumen, capturas de pantalla y grabador.
+- **Menú de Energía (`Super + P`)**: Apagado, reinicio, bloqueo y suspensión con compatibilidad universal para cualquier distribución.
+- **Selector de Fondos (`Super + V`)**: Carrusel inferior con previsualizaciones y sincronización automática de paleta con Pywal.
+
+### 🛠️ Instalación Rápida
+
+```bash
+git clone https://github.com/respaldoperez348-rgb/hypr-abyss.git ~/hypr-abyss
+cd ~/hypr-abyss
+./install.sh
 ```
 
-### Desenfoque en Hyprland (Frosted Glass)
-Añadido a `~/.config/hypr/rules.lua`:
-```lua
-hl.exec_cmd("hyprctl keyword layerrule 'blur, quickshell'")
-hl.exec_cmd("hyprctl keyword layerrule 'ignorezero, quickshell'")
-```
+---
+
+<div align="center">
+  <sub>Desarrollado con ❤️ para la comunidad de Hyprland & Linux.</sub>
+</div>

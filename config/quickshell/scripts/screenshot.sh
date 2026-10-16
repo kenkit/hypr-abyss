@@ -7,7 +7,11 @@ exec >>/tmp/screenshot.log 2>&1
 export PATH="$HOME/.local/bin:$PATH"
 
 MODE="${1:-region}" # "region" o "fullscreen"
-DIR="$HOME/Imágenes/Captura"
+PICS_DIR=$(xdg-user-dir PICTURES 2>/dev/null)
+if [[ -z "$PICS_DIR" || ! -d "$PICS_DIR" ]]; then
+    PICS_DIR="$HOME/Pictures"
+fi
+DIR="$PICS_DIR/Screenshots"
 mkdir -p "$DIR"
 
 echo "[$(date)] Captura iniciada con modo: $MODE"
@@ -26,7 +30,7 @@ else
     echo "[$(date)] Slurp exit code: $slurp_exit, geometry: '$geo'"
     if [[ $slurp_exit -ne 0 || -z "$geo" ]]; then
         echo "[$(date)] Selección cancelada por el usuario"
-        notify-send -u low -a "Captura" -t 2000 "Captura Cancelada" "No se seleccionó ninguna área"
+        notify-send -u low -a "Screenshot" -t 2000 "Screenshot Cancelled" "No area was selected"
         exit 0
     fi
     grim -g "$geo" "$FILE"
@@ -50,7 +54,7 @@ if [[ -f "$FILE" ]]; then
         fi
     fi
 
-    notify-send -u normal -a "Captura" -i "$FILE" "Captura Guardada" "Guardada en Imágenes\n$(basename "$FILE")"
+    notify-send -u normal -a "Screenshot" -i "$FILE" "Screenshot Saved" "Copied to clipboard and saved to $(basename "$DIR")\n$(basename "$FILE")"
     
     # Pequeña pausa para permitir que el reproductor de sonido finalice
     sleep 0.25

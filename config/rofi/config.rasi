@@ -1,0 +1,104 @@
+/**
+ * Rofi Minimalist Spotlight Launcher (Cyberpunk Frosted Glass)
+ * Diseño compacto, elegante y centrado, adaptado a resolución escalada (1.5x)
+ */
+
+configuration {
+    modi:                       "drun,run";
+    show-icons:                 true;
+    display-drun:               "";
+    display-run:                "";
+    drun-display-format:        "{name}";
+    font:                       "JetBrainsMono Nerd Font 10";
+    icon-theme:                 "Papirus-Dark";
+}
+
+@import "~/.cache/wal/colors-rofi-dark.rasi"
+
+* {
+    font:                       "JetBrainsMono Nerd Font 10";
+    background-color:           transparent;
+    text-color:                 #f0f6fc;
+}
+
+window {
+    width:                      420px;
+    border:                     1.5px;
+    border-color:               @selected-normal-background;
+    border-radius:              14px;
+    background-color:           rgba(13, 17, 23, 0.80);
+    padding:                    12px;
+    anchor:                     center;
+    location:                   center;
+}
+
+mainbox {
+    spacing:                    8px;
+    children:                   [ inputbar, listview ];
+}
+
+inputbar {
+    background-color:           rgba(22, 27, 34, 0.75);
+    border-radius:              10px;
+    border:                     1px;
+    border-color:               rgba(255, 255, 255, 0.08);
+    padding:                    6px 10px;
+    spacing:                    8px;
+    children:                   [ prompt, entry ];
+}
+
+prompt {
+    text-color:                 @selected-normal-background;
+    font-size:                  11px;
+    vertical-align:             0.5;
+}
+
+entry {
+    text-color:                 #f0f6fc;
+    placeholder:                "Buscar app...";
+    placeholder-color:          rgba(255, 255, 255, 0.35);
+    vertical-align:             0.5;
+}
+
+listview {
+    columns:                    1;
+    lines:                      5;
+    spacing:                    3px;
+    cycle:                      true;
+    dynamic:                    true;
+    scrollbar:                  false;
+    border:                     0px;
+    padding:                    4px 0px 0px 0px;
+}
+
+element {
+    padding:                    6px 10px;
+    border-radius:              8px;
+    spacing:                    10px;
+}
+
+element-icon {
+    size:                       20px;
+    vertical-align:             0.5;
+}
+
+element-text {
+    text-color:                 inherit;
+    vertical-align:             0.5;
+}
+
+element normal.normal {
+    background-color:           transparent;
+    text-color:                 #e6edf3;
+}
+
+element selected.normal {
+    background-color:           @selected-normal-background;
+    text-color:                 #ffffff;
+    border-radius:              8px;
+}
+
+element alternate.normal {
+    background-color:           transparent;
+    text-color:                 #e6edf3;
+}

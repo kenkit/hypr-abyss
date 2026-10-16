@@ -4,7 +4,7 @@ local home = os.getenv("HOME") or "/home/david-tineo"
 local terminal    = "kitty"
 local fileManager = "thunar"
 local menu        = "pkill rofi || rofi -show drun -show-icons"
-local toggleZen   = home .. "/.config/hypr/scripts/toggle_zen.sh"
+local toggleZen   = "zen-browser"
 -- Aplicaciones y control de ventanas
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())

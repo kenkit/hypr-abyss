@@ -122,14 +122,14 @@ Item {
             // 4. Módulo de Bandeja del Sistema (Apps en segundo plano: Zoom, Telegram, Discord, etc.)
             Row {
                 id: trayRow
-                visible: trayModule.visible
-                width: implicitWidth
+                visible: trayModule.hasItems
                 spacing: 8
                 anchors.verticalCenter: parent.verticalCenter
 
                 Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 1
+                    implicitWidth: 1
                     height: 10
                     color: root.theme ? root.theme.borderSubtle : Qt.rgba(1, 1, 1, 0.12)
                 }

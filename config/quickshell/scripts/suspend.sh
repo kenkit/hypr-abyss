@@ -18,4 +18,4 @@ if ! pidof hyprlock >/dev/null 2>&1; then
 fi
 
 # 2. Suspender el sistema de forma segura
-systemctl suspend
+systemctl suspend 2>/dev/null || loginctl suspend 2>/dev/null

@@ -59,7 +59,7 @@ Item {
             color: root.theme ? root.theme.warning : "#ffb86c",
             iconType: "logout",
             needsConfirm: true,
-            confirmText: "¿Cerrar sesión en Hyprland?",
+            confirmText: "Log out of Hyprland? / ¿Cerrar sesión?",
             command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/logout.sh"]
         },
         {
@@ -71,8 +71,8 @@ Item {
             color: root.theme ? root.theme.accentAlt : "#bd93f9",
             iconType: "reboot",
             needsConfirm: true,
-            confirmText: "¿Reiniciar el equipo ahora?",
-            command: ["systemctl", "reboot"]
+            confirmText: "Reboot system now? / ¿Reiniciar?",
+            command: ["sh", "-c", "systemctl reboot 2>/dev/null || loginctl reboot 2>/dev/null || reboot"]
         },
         {
             id: "poweroff",
@@ -83,10 +83,10 @@ Item {
             color: root.theme ? root.theme.danger : "#ff5555",
             iconType: "power",
             needsConfirm: true,
-            confirmText: "¿Apagar el equipo por completo?",
-            command: ["systemctl", "poweroff"]
+            confirmText: "Shut down system? / ¿Apagar?",
+            command: ["sh", "-c", "systemctl poweroff 2>/dev/null || loginctl poweroff 2>/dev/null || poweroff"]
         },
-{
+        {
             id: "suspend",
             title: "Suspender",
             subtitle: "Suspend Mode",
@@ -95,7 +95,7 @@ Item {
             color: "#8be9fd",
             iconType: "suspend",
             needsConfirm: false,
-            command: ["systemctl", "suspend"]
+            command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/suspend.sh"]
         }
     ]
 
@@ -272,6 +272,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
 
                         SequentialAnimation on opacity {
+                            running: root.isOpen
                             loops: Animation.Infinite
                             NumberAnimation { to: 0.3; duration: 900; easing.type: Easing.InOutQuad }
                             NumberAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutQuad }

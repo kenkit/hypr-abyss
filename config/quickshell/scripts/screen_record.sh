@@ -10,7 +10,10 @@ MODE="${2:-fullscreen}"
 
 PID_FILE="/dev/shm/wf_recorder.pid"
 AUDIO_MODS_FILE="/dev/shm/wf_recorder_audio_modules"
-REC_DIR="$HOME/Vídeos"
+REC_DIR=$(xdg-user-dir VIDEOS 2>/dev/null)
+if [[ -z "$REC_DIR" || ! -d "$REC_DIR" ]]; then
+    REC_DIR="$HOME/Videos"
+fi
 mkdir -p "$REC_DIR"
 
 is_recording() {
@@ -89,7 +92,7 @@ start_recording() {
     local pid=$!
     disown "$pid" 2>/dev/null
     echo "$pid" > "$PID_FILE"
-    notify-send -u normal -a "Grabador" -i media-record "Grabación Iniciada" "Modo: $MODE\nGuardando en Vídeos"
+    notify-send -u normal -a "Screen Recorder" -i media-record "Recording Started" "Mode: $MODE\nSaving to $(basename "$REC_DIR")"
     if [[ ! -f /dev/shm/notif_muted && ! -f /dev/shm/dnd_active ]]; then
         pw-play "$HOME/.local/share/sounds/freedesktop/stereo/camera-shutter.oga" 2>/dev/null &
     fi
@@ -108,7 +111,7 @@ stop_recording() {
         local cur_file
         cur_file=$(cat "/dev/shm/wf_recorder_current" 2>/dev/null)
         rm -f "/dev/shm/wf_recorder_current"
-        notify-send -u normal -a "Grabador" -i video-x-generic "Grabación Finalizada" "$(basename "${cur_file:-Grabación}")"
+        notify-send -u normal -a "Screen Recorder" -i video-x-generic "Recording Finished" "$(basename "${cur_file:-Recording}")"
         if [[ ! -f /dev/shm/notif_muted && ! -f /dev/shm/dnd_active ]]; then
             pw-play "$HOME/.local/share/sounds/freedesktop/stereo/complete.oga" 2>/dev/null &
         fi

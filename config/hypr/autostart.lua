@@ -2,10 +2,10 @@ local home = os.getenv("HOME")
 
 hl.on("hyprland.start", function ()
     -- Agente de autenticación polkit
-    hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
+    hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 || /usr/libexec/polkit-gnome-authentication-agent-1 || systemctl --user start hyprpolkitagent")
 
     -- Demonio de wallpapers para cambio dinámico
-    hl.exec_cmd(home .. "/.local/bin/swww-daemon")
+    hl.exec_cmd("swww-daemon || awww-daemon || " .. home .. "/.local/bin/swww-daemon")
 
     -- Quickshell (Dynamic Island)
     hl.exec_cmd("quickshell")

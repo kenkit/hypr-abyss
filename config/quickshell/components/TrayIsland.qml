@@ -21,15 +21,14 @@ Item {
     readonly property bool hasItems: itemCount > 0
 
     implicitHeight: 22
-    implicitWidth: hasItems ? contentRow.implicitWidth : 0
+    height: 22
+    implicitWidth: hasItems ? (itemCount * 22 + Math.max(0, itemCount - 1) * 5) : 0
+    width: implicitWidth
     visible: hasItems
-
-    Behavior on implicitWidth {
-        NumberAnimation { duration: 250; easing.type: Easing.OutQuad }
-    }
 
     Row {
         id: contentRow
+        anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         spacing: 5
 
@@ -38,6 +37,8 @@ Item {
 
             delegate: Rectangle {
                 id: trayItemDelegate
+                implicitWidth: 22
+                implicitHeight: 22
                 width: 22
                 height: 22
                 radius: 11
@@ -54,14 +55,16 @@ Item {
                     width: 14
                     height: 14
                     source: modelData.icon || ""
+                    onStatusChanged: console.log("[TrayIsland] itemIcon status:", status, "source:", source, "Ready?", status === Image.Ready)
+                    Component.onCompleted: console.log("[TrayIsland] itemIcon init status:", status, "source:", source, "Ready?", status === Image.Ready)
                 }
 
-                // Fallback si no hay icono visual cargado
+                // Fallback si no hay icono visual cargado o falló
                 Text {
                     anchors.centerIn: parent
-                    visible: itemIcon.status !== Image.Ready && (!modelData.icon || modelData.icon.length === 0)
+                    visible: itemIcon.status !== Image.Ready
                     text: (modelData.title && modelData.title.length > 0) ? modelData.title.substring(0, 1).toUpperCase() : "●"
-                    font.pixelSize: 9
+                    font.pixelSize: 10
                     font.bold: true
                     color: root.theme ? root.theme.accent : "#00ffcc"
                 }

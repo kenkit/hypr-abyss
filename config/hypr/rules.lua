@@ -108,3 +108,10 @@ hl.window_rule({
     opacity = "0.92 0.85",
 })
 
+-- Zen Browser como Scratchpad en espacio especial
+--hl.window_rule({
+    --name = "zen-scratchpad",
+    --match = { class = "zen" },
+    --workspace = "special:browser",
+--})
+

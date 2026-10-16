@@ -73,6 +73,41 @@ ShellRoot {
         }
     }
 
+    // Control de apertura del Reproductor de Música Aura Music (Super + Y)
+    property bool musicPlayerOpen: false
+
+    IpcHandler {
+        target: "musicplayer"
+        property bool isOpen: root.musicPlayerOpen
+
+        function toggle(): void {
+            root.musicPlayerOpen = !root.musicPlayerOpen;
+        }
+        function open(): void {
+            root.musicPlayerOpen = true;
+        }
+        function close(): void {
+            root.musicPlayerOpen = false;
+        }
+    }
+
+    // Control de visibilidad del Reloj de Escritorio (Desktop Clock)
+    property bool desktopClockVisible: true
+
+    IpcHandler {
+        target: "clock"
+
+        function toggle(): void {
+            root.desktopClockVisible = !root.desktopClockVisible;
+        }
+        function open(): void {
+            root.desktopClockVisible = true;
+        }
+        function close(): void {
+            root.desktopClockVisible = false;
+        }
+    }
+
     // ==========================================
     // 1. Barra Flotante Superior (Dynamic Island)
     // ==========================================
@@ -312,6 +347,89 @@ ShellRoot {
                 isOpen: root.powerMenuOpen
                 anchors.fill: parent
                 onCloseRequested: root.powerMenuOpen = false
+            }
+        }
+    }
+
+    // ==========================================
+    // 6. Reloj de Escritorio Retro Arrastrable (Desktop Clock Widget)
+    // ==========================================
+    Variants {
+        id: desktopClockVariants
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: clockPanel
+            property var modelData
+            screen: modelData
+
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
+
+            visible: root.desktopClockVisible
+            WlrLayershell.layer: desktopClock.layerOnTop ? WlrLayer.Top : WlrLayer.Bottom
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            exclusiveZone: 0
+            color: "transparent"
+
+            mask: Region {
+                item: desktopClock.hitboxItem
+            }
+
+            DesktopClock {
+                id: desktopClock
+                theme: globalTheme
+                anchors.fill: parent
+                screenWidth: clockPanel.width
+                screenHeight: clockPanel.height
+            }
+        }
+    }
+
+    // ==========================================
+    // 7. Reproductor de Música Aura Music Flotante (Super + Y)
+    // ==========================================
+    Variants {
+        id: musicPlayerVariants
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: musicPlayerPanel
+            property var modelData
+            screen: modelData
+
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
+
+            visible: root.musicPlayerOpen
+
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: root.musicPlayerOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+            color: "transparent"
+
+            mask: Region {
+                item: musicPlayerContainer.card
+            }
+
+            BackgroundEffect.blurRegion: Region {
+                item: musicPlayerContainer.card
+            }
+
+            MusicPlayer {
+                id: musicPlayerContainer
+                theme: globalTheme
+                isOpen: root.musicPlayerOpen
+                anchors.fill: parent
+                onCloseRequested: root.musicPlayerOpen = false
             }
         }
     }

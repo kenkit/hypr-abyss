@@ -50,6 +50,7 @@ Item {
     property var btDevices: []
     property bool btDrawerOpen: false
     property bool btScanning: false
+    property string btConnectingMac: ""
 
     property bool micMuted: false
 
@@ -253,16 +254,38 @@ Item {
                     root.btPowered = !!data.powered;
                     root.btDevices = data.devices || [];
                     root.btScanning = false;
-                } catch (e) {}
+                } catch (e) {
+                    root.btScanning = false;
+                }
             }
         }
+    }
+
+    Process {
+        id: btPowerProc
+        command: []
+        running: false
+        onExited: {
+            btScanProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/bt_scan.py"];
+            btScanProc.running = true;
+        }
+    }
+
+    function toggleBtPower(state) {
+        var arg = state !== undefined ? (state ? "on" : "off") : "toggle";
+        btPowerProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/bt_toggle.sh", arg];
+        btPowerProc.running = true;
     }
 
     Process {
         id: btConnectProc
         command: []
         running: false
-        onExited: btScanProc.running = true
+        onExited: {
+            root.btConnectingMac = "";
+            btScanProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/bt_scan.py"];
+            btScanProc.running = true;
+        }
     }
 
     function scanBluetooth() {
@@ -272,6 +295,7 @@ Item {
     }
 
     function connectBt(mac) {
+        root.btConnectingMac = mac;
         btConnectProc.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/bt_connect.sh", mac];
         btConnectProc.running = true;
     }
@@ -1054,15 +1078,42 @@ Item {
 
                     RowLayout {
                         Layout.fillWidth: true
+                        spacing: 6
+
                         Text {
                             text: "Dispositivos Bluetooth"
                             font.pixelSize: 8
                             font.bold: true
                             color: root.theme ? root.theme.accentAlt : "#bd93f9"
                         }
+
+                        // Badge / Conmutador de encendido
+                        Rectangle {
+                            width: 28
+                            height: 14
+                            radius: 7
+                            color: root.btPowered ? (root.theme ? root.theme.accentAlt : "#bd93f9") : Qt.rgba(1, 1, 1, 0.1)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: root.btPowered ? "ON" : "OFF"
+                                font.pixelSize: 7
+                                font.bold: true
+                                color: root.btPowered ? "#0d1117" : (root.theme ? root.theme.textDim : "#6e7681")
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.toggleBtPower(!root.btPowered)
+                            }
+                        }
+
                         Item { Layout.fillWidth: true }
+
                         // Botón Escanear
                         Text {
+                            visible: root.btPowered
                             text: root.btScanning ? "Buscando..." : "Buscar"
                             font.pixelSize: 8
                             color: root.theme ? root.theme.accent : "#00ffcc"
@@ -1080,48 +1131,131 @@ Item {
                         clip: true
                         spacing: 3
                         model: root.btDevices
+                        visible: root.btDevices.length > 0
 
                         delegate: Rectangle {
+                            id: devItem
                             width: parent ? parent.width : 260
                             height: 22
                             radius: 4
-                            color: modelData.connected ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+                            color: modelData.connected 
+                                   ? Qt.rgba(1, 1, 1, 0.12) 
+                                   : (devMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent")
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 4
-                                anchors.rightMargin: 4
+                                anchors.leftMargin: 6
+                                anchors.rightMargin: 6
+                                spacing: 4
+
+                                // Indicador de estado (conectado / vinculado / disponible)
+                                Rectangle {
+                                    width: 5
+                                    height: 5
+                                    radius: 2.5
+                                    color: modelData.connected 
+                                           ? (root.theme ? root.theme.accentAlt : "#bd93f9") 
+                                           : (modelData.paired ? (root.theme ? root.theme.accent : "#00ffcc") : Qt.rgba(1, 1, 1, 0.25))
+                                }
 
                                 Text {
-                                    text: (modelData.connected ? "● " : "○ ") + modelData.name
+                                    text: modelData.name
                                     font.pixelSize: 8
                                     font.bold: modelData.connected
-                                    color: modelData.connected ? (root.theme ? root.theme.accentAlt : "#bd93f9") : "#ffffff"
+                                    color: modelData.connected 
+                                           ? (root.theme ? root.theme.accentAlt : "#bd93f9") 
+                                           : (modelData.paired ? (root.theme ? root.theme.text : "#f0f6fc") : (root.theme ? root.theme.textDim : "#8b949e"))
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
                                 }
 
                                 Text {
-                                    text: modelData.connected ? "Desconectar" : "Conectar"
+                                    text: modelData.mac === root.btConnectingMac 
+                                          ? "Conectando..." 
+                                          : (modelData.connected ? "Desconectar" : (modelData.paired ? "Conectar" : "Vincular"))
                                     font.pixelSize: 7
-                                    color: root.theme ? root.theme.textDim : "#6e7681"
+                                    font.bold: modelData.connected || modelData.mac === root.btConnectingMac
+                                    color: modelData.mac === root.btConnectingMac 
+                                           ? (root.theme ? root.theme.warning : "#ffb86c") 
+                                           : (modelData.connected 
+                                              ? (root.theme ? root.theme.danger : "#ff5555") 
+                                              : (root.theme ? root.theme.accent : "#00ffcc"))
                                 }
                             }
 
                             MouseArea {
+                                id: devMouse
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.connectBt(modelData.mac)
                             }
                         }
                     }
 
-                    Text {
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
                         visible: root.btDevices.length === 0
-                        text: "Sin dispositivos vinculados"
-                        font.pixelSize: 8
-                        color: root.theme ? root.theme.textDim : "#6e7681"
-                        Layout.alignment: Qt.AlignHCenter
+
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: 4
+
+                            Text {
+                                text: !root.btPowered 
+                                      ? "Bluetooth desactivado" 
+                                      : (root.btScanning ? "Buscando dispositivos..." : "Sin dispositivos encontrados")
+                                font.pixelSize: 8
+                                color: root.theme ? root.theme.textDim : "#6e7681"
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
+                            Rectangle {
+                                visible: !root.btPowered
+                                width: 70
+                                height: 18
+                                radius: 4
+                                color: root.theme ? root.theme.accentAlt : "#bd93f9"
+                                Layout.alignment: Qt.AlignHCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Activar"
+                                    font.pixelSize: 8
+                                    font.bold: true
+                                    color: "#0d1117"
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.toggleBtPower(true)
+                                }
+                            }
+
+                            Rectangle {
+                                visible: root.btPowered && !root.btScanning && root.btDevices.length === 0
+                                width: 80
+                                height: 18
+                                radius: 4
+                                color: Qt.rgba(1, 1, 1, 0.08)
+                                Layout.alignment: Qt.AlignHCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Buscar"
+                                    font.pixelSize: 8
+                                    color: root.theme ? root.theme.accent : "#00ffcc"
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.scanBluetooth()
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1234,12 +1368,24 @@ Item {
 
                             MouseArea {
                                 anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.btDrawerOpen = !root.btDrawerOpen;
-                                    root.wifiDrawerOpen = false;
-                                    if (root.btDrawerOpen) {
-                                        root.scanBluetooth();
+                                onClicked: (mouse) => {
+                                    if (mouse.button === Qt.RightButton) {
+                                        root.toggleBtPower(!root.btPowered);
+                                    } else {
+                                        if (!root.btPowered) {
+                                            root.toggleBtPower(true);
+                                            root.btDrawerOpen = true;
+                                            root.wifiDrawerOpen = false;
+                                            root.scanBluetooth();
+                                        } else {
+                                            root.btDrawerOpen = !root.btDrawerOpen;
+                                            root.wifiDrawerOpen = false;
+                                            if (root.btDrawerOpen) {
+                                                root.scanBluetooth();
+                                            }
+                                        }
                                     }
                                 }
                             }

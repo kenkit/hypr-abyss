@@ -3,9 +3,15 @@ import subprocess, json
 
 def get_wifi_list():
     try:
+        # Ensure wifi radio is on
+        radio = subprocess.run(['nmcli', 'radio', 'wifi'], capture_output=True, text=True, timeout=2)
+        if radio.returncode == 0 and radio.stdout.strip().lower() == 'disabled':
+            subprocess.run(['nmcli', 'radio', 'wifi', 'on'], capture_output=True, timeout=2)
+            subprocess.run(['rfkill', 'unblock', 'wifi'], capture_output=True, timeout=2)
+
         out = subprocess.check_output(
             ['nmcli', '-t', '-f', 'in-use,ssid,bssid,signal,security', 'dev', 'wifi'], 
-            text=True, timeout=5
+            text=True, timeout=6
         )
         networks = []
         seen = set()

@@ -78,5 +78,5 @@ hyprctl reload 2>/dev/null || true
 
 # 8. Notificación visual si notify-send está disponible
 if command -v notify-send >/dev/null 2>&1; then
-    notify-send -a "Cyberpunk Theme" -i "$wal_target" "Tema Sincronizado" "$(basename "$WALLPAPER")" 2>/dev/null || true
+    notify-send -a "Cyberpunk Theme" -i "$wal_target" "Theme Synchronized" "$(basename "$WALLPAPER")" 2>/dev/null || true
 fi

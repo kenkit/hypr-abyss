@@ -18,9 +18,9 @@ fi
 
 status=$?
 if [[ $status -eq 0 ]]; then
-    notify-send -u normal -a "WiFi" -i network-wireless "WiFi Conectado" "Conexión exitosa a $SSID"
-    echo '{"success": true, "message": "Conectado a '"$SSID"'"}'
+    notify-send -u normal -a "WiFi" -i network-wireless "WiFi Connected" "Connected to $SSID"
+    echo '{"success": true, "message": "Connected to '"$SSID"'"}'
 else
-    notify-send -u critical -a "WiFi" -i network-wireless-offline "Error de WiFi" "$res"
+    notify-send -u critical -a "WiFi" -i network-wireless-offline "WiFi Connection Failed" "$res"
     echo '{"success": false, "message": "'"$res"'"}'
 fi

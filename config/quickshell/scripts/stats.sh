@@ -105,7 +105,7 @@ bt_powered=false
 if bluetoothctl show 2>/dev/null | grep -q "Powered: yes"; then
     bt_powered=true
 fi
-bt_device=$(bluetoothctl info 2>/dev/null | awk -F": " '/Name:/ {print $2; exit}')
+bt_device=$(bluetoothctl devices Connected 2>/dev/null | head -1 | cut -d' ' -f3-)
 bt_device=${bt_device:-""}
 
 # Salida JSON limpia

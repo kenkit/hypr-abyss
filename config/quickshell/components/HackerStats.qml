@@ -73,6 +73,13 @@ Item {
         }
     }
 
+    // Proceso para abrir el Centro de Control
+    Process {
+        id: openCcProc
+        command: ["quickshell", "ipc", "call", "controlcenter", "open"]
+        running: false
+    }
+
     // Temporizador para contraer suavemente el estado tras mostrar feedback
     Timer {
         id: btFeedbackTimer
@@ -299,20 +306,25 @@ Item {
                 id: btMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    // 1. Conmutar el estado en la interfaz de inmediato
-                    root.bt = !root.bt;
-                    if (!root.bt) {
-                        root.btDevice = "";
-                    }
-                    // 2. Mostrar la etiqueta con el nuevo estado (ON / OFF)
-                    root.showBtName = true;
-                    btFeedbackTimer.restart();
+                onClicked: (mouse) => {
+                    if (mouse.button === Qt.RightButton) {
+                        openCcProc.running = true;
+                    } else {
+                        // 1. Conmutar el estado en la interfaz de inmediato
+                        root.bt = !root.bt;
+                        if (!root.bt) {
+                            root.btDevice = "";
+                        }
+                        // 2. Mostrar la etiqueta con el nuevo estado (ON / OFF)
+                        root.showBtName = true;
+                        btFeedbackTimer.restart();
 
-                    // 3. Ejecutar bluetoothctl power on/off mediante el script
-                    if (!btToggleProc.running) {
-                        btToggleProc.running = true;
+                        // 3. Ejecutar bluetoothctl power on/off mediante el script
+                        if (!btToggleProc.running) {
+                            btToggleProc.running = true;
+                        }
                     }
                 }
             }

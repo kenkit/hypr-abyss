@@ -24,35 +24,35 @@ aur_count=0
 total_count=$(( official_count + aur_count ))
 
 if (( total_count > 0 )); then
-    summary="Actualizaciones Disponibles"
-    body="Hay <b>${total_count}</b> paquetes listos para actualizar (${official_count} oficiales, ${aur_count} AUR)."
+    summary="Updates Available"
+    body="There are <b>${total_count}</b> updates ready (${official_count} official, ${aur_count} AUR)."
 
     # Enviar notificación interactiva con opciones de acción directa
     action=$(notify-send \
-        -a "Actualizador de Arch" \
+        -a "Arch Updater" \
         -i "$ICON" \
         -u normal \
         -t 15000 \
         -h string:x-dunst-stack-tag:arch_updates \
-        -A "update=🚀 Actualizar Ahora" \
-        -A "view=📋 Ver Paquetes" \
+        -A "update=🚀 Update Now" \
+        -A "view=📋 View Packages" \
         "$summary" \
         "$body" 2>/dev/null || true)
 
     case "$action" in
         "update"|"2")
-            kitty --class arch-updater --title "Actualización del Sistema Arch Linux" -e "$UPDATE_SCRIPT" &
+            kitty --class arch-updater --title "Arch Linux System Update" -e "$UPDATE_SCRIPT" &
             ;;
         "view"|"1")
-            kitty --class arch-updater --title "Lista de Actualizaciones Pendientes" -e bash -c "
-                echo -e '\033[1;36m=== PAQUETES OFICIALES ($official_count) ===\033[0m';
+            kitty --class arch-updater --title "Pending Updates" -e bash -c "
+                echo -e '\033[1;36m=== OFFICIAL PACKAGES ($official_count) ===\033[0m';
                 echo '$official_list';
                 echo '';
-                echo -e '\033[1;35m=== PAQUETES AUR ($aur_count) ===\033[0m';
+                echo -e '\033[1;35m=== AUR PACKAGES ($aur_count) ===\033[0m';
                 echo '$aur_list';
                 echo '';
-                read -rp '¿Deseas iniciar la actualización ahora? [s/N]: ' ans;
-                if [[ \$ans =~ ^[sS]$ ]]; then
+                read -rp 'Start update now? [y/N]: ' ans;
+                if [[ \$ans =~ ^[yYsS]$ ]]; then
                     '$UPDATE_SCRIPT';
                 fi
             " &
@@ -60,11 +60,11 @@ if (( total_count > 0 )); then
     esac
 elif [[ "$1" == "--notify-always" || "$1" == "--manual" ]]; then
     notify-send \
-        -a "Actualizador de Arch" \
+        -a "Arch Updater" \
         -i "$ICON" \
         -u low \
         -t 3500 \
         -h string:x-dunst-stack-tag:arch_updates \
-        "Sistema al Día" \
-        "Todos los paquetes oficiales y de AUR están en su última versión."
+        "System Up to Date" \
+        "All official and AUR packages are up to date."
 fi

@@ -40,7 +40,7 @@ notify_user() {
         -u low \
         -t 1500 \
         -i "$icon" \
-        "Brillo: ${current}%"
+        "Brightness: ${current}%"
 }
 
 # Aplicar cambio de brillo

@@ -82,7 +82,7 @@ notify_user() {
             -u low \
             -t 1500 \
             -i "$icon" \
-            "Volumen: Silenciado"
+            "Volume: Muted"
     else
         local vol_val
         vol_val=$(get_volume_num)
@@ -94,7 +94,7 @@ notify_user() {
             -u low \
             -t 1500 \
             -i "$icon" \
-            "Volumen: ${vol_val}%"
+            "Volume: ${vol_val}%"
     fi
 }
 
@@ -140,18 +140,18 @@ toggle_mute() {
 # Alternar Silencio Micrófono
 toggle_mic() {
     local mic_icon="$iDIR/unmuted-mic.svg"
-    local mic_status="Activado"
+    local mic_status="Unmuted"
     if command -v pamixer >/dev/null 2>&1; then
         pamixer --default-source -t
         if [[ "$(pamixer --default-source --get-mute)" == "true" ]]; then
             mic_icon="$iDIR/muted-mic.svg"
-            mic_status="Silenciado"
+            mic_status="Muted"
         fi
     elif command -v wpctl >/dev/null 2>&1; then
         wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
         if wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | grep -q "\[MUTED\]"; then
             mic_icon="$iDIR/muted-mic.svg"
-            mic_status="Silenciado"
+            mic_status="Muted"
         fi
     fi
     notify-send -e \
@@ -161,7 +161,7 @@ toggle_mic() {
         -u low \
         -t 1500 \
         -i "$mic_icon" \
-        "Micrófono: $mic_status"
+        "Microphone: $mic_status"
 }
 
 # Ejecutar según argumento

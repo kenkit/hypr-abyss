@@ -21,7 +21,7 @@ start_awake() {
     disown "$pid" 2>/dev/null
     echo "$pid" > "$PID_FILE"
     date +"%I:%M %p" > "$TIME_FILE"
-    notify-send -u normal -a "Control Center" -i preferences-desktop-screensaver "Keep Awake Activado" "Suspensión bloqueada"
+    notify-send -u normal -a "Control Center" -i preferences-desktop-screensaver "Keep Awake Enabled" "Sleep inhibited"
 }
 
 stop_awake() {
@@ -35,7 +35,7 @@ stop_awake() {
     fi
     pkill -f "why=Keep_Awake" 2>/dev/null
     rm -f "$PID_FILE" "$TIME_FILE"
-    notify-send -u normal -a "Control Center" -i preferences-desktop-screensaver "Keep Awake Desactivado" "Suspensión restaurada"
+    notify-send -u normal -a "Control Center" -i preferences-desktop-screensaver "Keep Awake Disabled" "Sleep restored"
 }
 
 case "$ACTION" in

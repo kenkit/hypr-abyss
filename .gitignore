@@ -3,3 +3,8 @@
 id_rsa*
 *.log
 fish_history
+.cache/
+__pycache__/
+*.pyc
+*.swp
+*~
