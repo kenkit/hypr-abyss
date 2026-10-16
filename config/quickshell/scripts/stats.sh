@@ -90,12 +90,16 @@ fi
 # 3. WiFi (Lectura directa de /proc/net/wireless y /sys/class/net)
 wifi_signal=0
 wifi_ssid="Disconnected"
-if grep -q "wlp" /proc/net/wireless 2>/dev/null; then
-    raw_sig=$(awk '/wlp/ {gsub(/\./, ""); print int($3)}' /proc/net/wireless 2>/dev/null)
+# Check for either modern "wlp" or older "wlan" interfaces
+if grep -qE "wlp|wlan" /proc/net/wireless 2>/dev/null; then
+    # Dynamically extract signal using ERE (Extended Regular Expressions) for wlp or wlan
+    raw_sig=$(awk '/wlp|wlan/ {gsub(/\./, ""); print int($3)}' /proc/net/wireless 2>/dev/null)
     wifi_signal=$(( raw_sig > 100 ? 100 : raw_sig ))
+    
     wifi_ssid=$(iwgetid -r 2>/dev/null)
     if [[ -z "$wifi_ssid" ]]; then
-        wifi_ssid=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | awk -F: '/^yes:/ || /^sí:/ {print $2; exit}')
+        # Added locale-agnostic or fallback checks for nmcli parsing
+        wifi_ssid=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | awk -F: '/^(yes|sí|true):/ {print $2; exit}')
     fi
     wifi_ssid=${wifi_ssid:-"Connected"}
 fi
