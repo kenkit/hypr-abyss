@@ -150,3 +150,9 @@ cd ~/hypr-abyss
 <div align="center">
   <sub>Desarrollado con ❤️ para la comunidad de Hyprland & Linux.</sub>
 </div>
+
+
+
+
+<img width="1920" height="1080" alt="swappy-20261016_032020" src="https://github.com/user-attachments/assets/e98be312-5e94-43b1-b5d6-4312eb96dc1e" />
+
